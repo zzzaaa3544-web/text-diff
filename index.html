@@ -1,0 +1,70 @@
+<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Text Diff</title>
+<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',sans-serif;background:#0f0f23;color:#e0e0e0;height:100vh;display:flex;flex-direction:column}
+.ob{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.92);z-index:1000;display:flex;justify-content:center;align-items:center}.ob.hide{display:none}
+.oc{background:#1a1a3e;border-radius:20px;padding:40px;max-width:500px;width:90%;text-align:center;margin:0 auto}
+.oc h2{color:#00cec9;font-size:28px;margin-bottom:8px}.oc .sub{color:#888;font-size:14px}
+.stps{margin:25px 0;text-align:left;display:flex;flex-direction:column;gap:18px}
+.st{display:flex;gap:14px;align-items:flex-start}.st .n{width:32px;height:32px;border-radius:50%;background:#00cec9;color:#000;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px}
+.st h4{font-size:14px;margin-bottom:2px}.st p{font-size:12px;color:#888;line-height:1.5}
+.oc button{padding:14px 40px;border:none;border-radius:10px;background:#00cec9;color:#000;font-size:16px;font-weight:700;cursor:pointer}
+.oc .sk{color:#555;font-size:12px;cursor:pointer;margin-top:12px;display:inline-block}
+.app{display:none;flex:1;flex-direction:column}.app.show{display:flex}
+.topbar{display:flex;justify-content:space-between;align-items:center;padding:10px 20px;background:#1a1a3e;border-bottom:1px solid #2a2a4e;flex-wrap:wrap;gap:8px}
+.topbar h1{font-size:16px}h1 span{background:linear-gradient(90deg,#00cec9,#00b894);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.topbar .actions{display:flex;gap:8px}
+.topbar button{padding:6px 14px;border:1px solid #333;border-radius:6px;background:#0f0f23;color:#fff;cursor:pointer;font-size:12px}
+.topbar button:hover{border-color:#00cec9}
+.panels{display:flex;flex:1;overflow:hidden}
+.panel{flex:1;display:flex;flex-direction:column}
+.panel .label{padding:8px 15px;font-size:12px;color:#666;background:#141428;border-bottom:1px solid #2a2a4e}
+.panel textarea{flex:1;padding:15px;background:#0f0f23;color:#e0e0e0;font-family:monospace;font-size:13px;border:none;resize:none;line-height:1.7}
+.panel textarea:focus{outline:none}
+.divider{width:1px;background:#2a2a4e}
+.output{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.output .label{padding:8px 15px;font-size:12px;color:#666;background:#141428;border-bottom:1px solid #2a2a4e}
+.output .content{flex:1;padding:15px;overflow-y:auto;background:#141428;font-family:monospace;font-size:13px;line-height:1.7}
+.output .line{padding:2px 8px;border-radius:4px;margin-bottom:2px}
+.output .line.added{background:rgba(0,184,148,0.15);color:#00b894}
+.output .line.removed{background:rgba(255,107,107,0.15);color:#ff6b6b}
+.output .line.same{color:#555}
+.output .line .marker{display:inline-block;width:16px;text-align:center;margin-right:6px;font-weight:700}
+.output .line.added .marker{color:#00b894}.output .line.removed .marker{color:#ff6b6b}
+.stats{padding:8px 20px;background:#1a1a3e;border-top:1px solid #2a2a4e;font-size:12px;color:#666;display:flex;gap:20px}
+.stats .added{color:#00b894}.stats .removed{color:#ff6b6b}
+</style></head><body>
+<div class="ob" id="ob"><div class="oc">
+<h2>Text Diff</h2><p class="sub">Compare two texts and find differences</p>
+<div class="stps">
+<div class="st"><div class="n">1</div><div><h4>Paste Original Text</h4><p>Type or paste the original text in the left panel.</p></div></div>
+<div class="st"><div class="n">2</div><div><h4>Paste Modified Text</h4><p>Type or paste the modified version in the right panel.</p></div></div>
+<div class="st"><div class="n">3</div><div><h4>Click Compare</h4><p>Differences appear in the output: green = added lines, red = removed lines, grey = unchanged.</p></div></div>
+</div>
+<button onclick="start()">Open Diff Tool</button>
+<div class="sk" onclick="start()">Skip</div>
+</div></div>
+<div class="app" id="app">
+<div class="topbar"><h1><span>Text Diff</span></h1><div class="actions"><button onclick="compare()">Compare</button><button onclick="loadExample()">Load Example</button><button onclick="clearAll()">Clear</button></div></div>
+<div class="panels"><div class="panel"><div class="label">ORIGINAL</div><textarea id="left" placeholder="Paste original text here..." oninput="compare()"></textarea></div><div class="divider"></div><div class="panel"><div class="label">MODIFIED</div><textarea id="right" placeholder="Paste modified text here..." oninput="compare()"></textarea></div></div>
+<div class="output"><div class="label">DIFFERENCES</div><div class="content" id="output"></div></div>
+<div class="stats" id="stats">Ready</div></div>
+<script>
+function start(){document.getElementById('ob').classList.add('hide');document.getElementById('app').classList.add('show');localStorage.setItem('td_seen','1')}
+if(localStorage.getItem('td_seen')){document.getElementById('ob').classList.add('hide');document.getElementById('app').classList.add('show')}
+function compare(){
+var left=document.getElementById('left').value.split('\n');var right=document.getElementById('right').value.split('\n');
+var maxLen=Math.max(left.length,right.length);var added=0,removed=0,same=0;var html='';
+for(var i=0;i<maxLen;i++){
+var l=i<left.length?left[i]:undefined;var r=i<right.length?right[i]:undefined;
+if(l===undefined){html+='<div class="line added"><span class="marker">+</span>'+escapeHtml(r)+'</div>';added++}
+else if(r===undefined){html+='<div class="line removed"><span class="marker">-</span>'+escapeHtml(l)+'</div>';removed++}
+else if(l===r){html+='<div class="line same"><span class="marker">&nbsp;</span>'+escapeHtml(l)+'</div>';same++}
+else{html+='<div class="line removed"><span class="marker">-</span>'+escapeHtml(l)+'</div>';html+='<div class="line added"><span class="marker">+</span>'+escapeHtml(r)+'</div>';added++;removed++}
+}
+document.getElementById('output').innerHTML=html||'<p style="color:#555;padding:20px">No text to compare</p>';
+document.getElementById('stats').innerHTML='<span class="added">+'+added+' added</span> <span class="removed">-'+removed+' removed</span> <span>'+same+' unchanged</span>';
+}
+function escapeHtml(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function loadExample(){document.getElementById('left').value='Hello World\nThis is line two\nThis line is the same\nThis will be removed\nFinal line';
+document.getElementById('right').value='Hello World\nThis is modified line\nThis line is the same\nThis is a new line\nFinal line\nExtra line added';compare()}
+function clearAll(){document.getElementById('left').value='';document.getElementById('right').value='';document.getElementById('output').innerHTML='';document.getElementById('stats').textContent='Ready'}
+</script></body></html>
